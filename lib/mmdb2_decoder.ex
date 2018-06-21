@@ -32,6 +32,7 @@ defmodule MMDB2Decoder do
   alias MMDB2Decoder.Database
   alias MMDB2Decoder.LookupTree
   alias MMDB2Decoder.Metadata
+  alias MMDB2Decoder.IP
 
   @metadata_marker <<0xAB, 0xCD, 0xEF>> <> "MaxMind.com"
 
@@ -56,9 +57,12 @@ defmodule MMDB2Decoder do
   """
   @spec lookup(:inet.ip_address(), Metadata.t(), binary, binary) :: map | nil
   def lookup(ip, meta, tree, data) do
-    ip
-    |> LookupTree.locate(meta, tree)
-    |> Database.lookup_pointer(data, meta)
+    {pointer, net_bit} = ip |> LookupTree.locate(meta, tree)
+
+    case Database.lookup_pointer(pointer, data, meta) do
+      nil -> nil
+      map -> Map.put(map, :prefix, {IP.network_prefix(ip, net_bit), net_bit})
+    end
   end
 
   @doc """
